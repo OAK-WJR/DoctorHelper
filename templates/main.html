@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .file-dropzone {
+            border: 2px dashed #aaa;
+            border-radius: 5px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            color: #aaa;
+        }
+
+        .file-dropzone:hover {
+            background-color: #f7f7f7;
+        }
+
+        #imagePreview {
+            max-width: 100%;
+            margin-top: 20px;
+        }
+
+        #ocrResult, .content-section {
+            display: none;
+        }
+
+        #ocrResult, #translateResult, #summaryResult {
+            border: 1px solid #aaa;
+            border-radius: 5px;
+        }
+    </style>
+    <title>DH-process</title>
+</head>
+    <body>
+        <div class="container mt-5">
+            <h2 class="mb-3">Doctor-Helper Demo</h2>
+            <ul class="nav nav-pills mb-3">
+                <li class="nav-item">
+                    <a class="nav-link active" href="javascript:switchTab('ocr')">Step 1: OCR</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="javascript:switchTab('translate')">Step 2: Translate</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="javascript:switchTab('summary')">Step 3: Summary</a>
+                </li>
+            </ul>
+            
+            <div class="border rounded p-4 content-section" id="ocr">
+                <form id="ocrForm" action="/recognize" method="post" enctype="multipart/form-data">
+                    <div class="file-dropzone mb-3" onclick="document.getElementById('imageInput').click()">
+                        Please select image file
+                    </div>
+                    <input type="file" name="image" id="imageInput" class="d-none" onchange="displayImage(this)">
+                    
+                    <div class="row align-items-center"> 
+                        <div class="col-auto">
+                            <input type="button" value="Recognize" onclick="submitForm('ocrForm', 'ocrResult')" class="btn btn-primary">
+                        </div>
+                        <div class="col-auto">
+                            <div id="progressBarContainer" style="display: none; width: 100%;">
+                                <div class="progress" style="width: 200px;"> <!-- set any width you like -->
+                                    <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <img id="imagePreview" src="#" alt="Selected Image" style="display: none;">
+                    </div>
+                    <div class="col-md-6">
+                        <textarea id="ocrResult" style="width: 100%;"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border rounded p-4 content-section" id="translate">
+                <form id="translateForm" action="/translate" method="post">
+                    <textarea name="text" rows="4" class="form-control mb-3"></textarea>
+                    <input type="button" value="Translate" onclick="submitForm('translateForm', 'translateResult')" class="btn btn-primary">
+                </form>
+                <textarea id="translateResult" class="form-control mt-3"></textarea>           
+            </div>
+
+            <div class="border rounded p-4 content-section" id="summary">
+                <form id="summaryForm" action="/summarize" method="post">
+                    <textarea name="text" rows="4" class="form-control mb-3"></textarea>
+                    <input type="button" value="Summarize" onclick="submitForm('summaryForm', 'summaryResult')" class="btn btn-primary">
+                </form>
+                <textarea id="summaryResult" class="form-control mt-3"></textarea>
+            </div>
+
+        </div>
+        
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+        <script>
+        function submitForm(formId, resultId) {
+            let formData = new FormData(document.getElementById(formId));
+            let actionUrl = document.getElementById(formId).action;
+
+            function adjustTextareaHeight(textarea) {
+                textarea.style.height = "auto";
+                textarea.style.height = (textarea.scrollHeight) + "px";
+            }
+
+            let interval;
+
+            if (formId === 'ocrForm') {
+                $('#progressBarContainer').show();
+                let width = 0;
+                interval = setInterval(function() {
+                    width += 5;  
+                    $('#progressBar').css('width', width + '%');
+
+                    if (width >= 100) {
+                        clearInterval(interval);
+                    }
+                }, 1000);
+            }
+
+            $.ajax({
+                type: 'POST',
+                url: actionUrl,
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(data) {
+                    if (formId === 'ocrForm') {
+                        clearInterval(interval);
+                        $('#progressBar').css('width', '100%');
+
+                        setTimeout(function() { 
+                            $('#progressBarContainer').hide();
+                            $('#progressBar').css('width', '0%');
+
+                            let resultText = data.recognized_text || 'No recognized text available';
+                            $('#translateForm textarea[name="text"]').val(resultText);
+                            const textareaElem = $('#' + resultId);
+                            textareaElem.val(resultText).show();
+                            adjustTextareaHeight(textareaElem[0]);
+                        }, 1000);
+                    } else if (formId === 'translateForm') {
+                        let resultText = data.translated_text || 'No translation available';
+                        $('#summaryForm textarea[name="text"]').val(resultText);
+                        $('#translateResult').text(resultText).show();
+                    } else if (formId === 'summaryForm') {
+                        let resultText = data.summary || 'No summary available';
+                        $('#summaryResult').text(resultText).show();
+                    }
+                },
+                error: function() {
+                    clearInterval(interval);
+                    $('#progressBar').css('width', '100%');
+
+                    setTimeout(function() {
+                        $('#progressBarContainer').hide();
+                        $('#progressBar').css('width', '0%');
+                        $('#' + resultId).val('ERROR!!!').show();
+                    }, 1000);
+                }
+            });
+        }
+
+        function displayImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+
+                reader.onload = function(e) {
+                    $('#imagePreview').attr('src', e.target.result).show();
+                }
+
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function switchTab(tabName) {
+            $('.content-section').hide();
+            $('#' + tabName).show();
+            $('.nav-pills .nav-link').removeClass('active');
+            $('.nav-pills .nav-link[href="javascript:switchTab(\'' + tabName + '\')"]').addClass('active');
+        }
+
+        $(document).ready(function() {
+            switchTab('ocr');
+        });
+
+        </script>
+
+    </body>
+</html>
