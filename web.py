@@ -1,18 +1,19 @@
-#!/usr/local/bin/python3
+#!/usr/bin/env python3
+"""Doctor-Helper demo: read photos of a Chinese medical record, translate the text into English and summarize it.
 
-import test
-import os
-from werkzeug.utils import secure_filename
+The page translates in the browser, with Chrome's built-in Translator API, so the server only reads photos and summarizes.
+"""
+import os, tempfile
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 from paddleocr import PaddleOCR
-from transformers import T5ForConditionalGeneration, T5Tokenizer
+import summarizer
+
+PICTURE_TYPES = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
 
 app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB per request
 
 ocr = PaddleOCR(lang="ch")
-MODEL_NAME = 't5-small'
-tokenizer = T5Tokenizer.from_pretrained(MODEL_NAME)
-model = T5ForConditionalGeneration.from_pretrained(MODEL_NAME)
 
 @app.route('/')
 def index():
@@ -24,33 +25,31 @@ def main_page():
 
 @app.route('/recognize', methods=['POST'])
 def recognize_text():
-  images = request.files.getlist('image')
+  images = [image for image in request.files.getlist('image') if image.filename]
+  if not images:
+    return jsonify({"error": "Please choose at least one photo."}), 400
+
   all_texts = []
-
   for image in images:
-    filename = secure_filename(image.filename)
-    image_path = os.path.join("uploads", filename)
-    image.save(image_path)
-    results = ocr.ocr(image_path)
-    recognized_text = "\n".join(txt[1][0] for txt in results[0])
-    all_texts.append(recognized_text)
-    
-  combined_text = "\n\n".join(all_texts)
-  print(combined_text)
-  return jsonify({"recognized_text": combined_text})
+    suffix = os.path.splitext(image.filename)[1].lower()
+    # The photo is only kept in a temporary folder that is deleted right after reading
+    with tempfile.TemporaryDirectory() as folder:
+      path = os.path.join(folder, "photo" + (suffix if suffix in PICTURE_TYPES else ".png"))
+      image.save(path)
+      results = ocr.ocr(path)
+    lines = results[0] if results and results[0] else []
+    all_texts.append("\n".join(line[1][0] for line in lines))
 
-@app.route('/translate', methods=['POST'])
-def translate_text():
-  text = request.form['text']
-  translated_text = ""   # not included in this public copy
-  print(translated_text)
-  return jsonify({"translated_text": translated_text})
+  return jsonify({"recognized_text": "\n\n".join(all_texts).strip()})
+
+@app.errorhandler(413)
+def too_large(error):
+  return jsonify({"error": "The photos are too large (20 MB in total at most)."}), 413
 
 @app.route('/summarize', methods=['POST'])
 def summarize_text():
-  text = request.form['text']
-  summary = test.run(text)
-  return jsonify({"summary": summary})
+  return jsonify({"summary": summarizer.run(request.form.get('text', ''))})
 
 if __name__ == '__main__':
-  app.run(host='0.0.0.0', port=80, debug=True)
+  # Only this computer can open the page, and the Flask debugger stays off
+  app.run(host='127.0.0.1', port=8000, debug=False)

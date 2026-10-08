@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+          integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
     <style>
       .file-dropzone {
         border: 2px dashed #aaa;
@@ -11,43 +12,35 @@
         padding: 20px;
         text-align: center;
         cursor: pointer;
-        color: #aaa;
-      }
-
-      .file-dropzone.dragover {
-        background-color: #e7e7e7;
       }
 
       .file-dropzone:hover {
         background-color: #f7f7f7;
       }
 
-      #imagePreview {
-        max-width: 100%;
-        margin-top: 20px;
+      .file-dropzone.dragover {
+        background-color: #e7e7e7;
       }
 
-      #ocrResult, .content-section {
+      .content-section {
         display: none;
       }
 
-      #ocrResult, #translateResult, #summaryResult {
-        border: 1px solid #aaa;
-        border-radius: 5px;
+      #imagePreviewContainer img {
+        max-height: 120px;
+        max-width: 100%;
       }
-
     </style>
-    <title>DH-process</title>
+    <title>Doctor-Helper Demo</title>
   </head>
-
-
 
   <body>
     <div class="container mt-5">
-      <h2 class="mb-3">Doctor-Helper Demo</h2>
+      <h2 class="mb-2">Doctor-Helper Demo</h2>
+      <p class="alert alert-warning py-2 mb-3" role="note">Research project only. It has not reached the stage of clinical use. Do not use it to make medical decisions.</p>
       <ul class="nav nav-pills mb-3">
         <li class="nav-item">
-          <a class="nav-link active" href="javascript:switchTab('ocr')">Step 1: OCR</a>
+          <a class="nav-link" href="javascript:switchTab('ocr')">Step 1: OCR</a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="javascript:switchTab('translate')">Step 2: Translate</a>
@@ -56,133 +49,158 @@
           <a class="nav-link" href="javascript:switchTab('summary')">Step 3: Summary</a>
         </li>
       </ul>
-        
+
       <div class="border rounded p-4 content-section" id="ocr">
         <form id="ocrForm" action="/recognize" method="post" enctype="multipart/form-data">
-          <div class="file-dropzone mb-3" onclick="document.getElementById('imageInput').click()">
-            Please select image file
+          <div class="file-dropzone text-muted mb-3" tabindex="0" role="button" onclick="document.getElementById('imageInput').click()"
+               onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.click(); }">
+            Click or drop photos of a medical record here
           </div>
-          <input type="file" name="image" id="imageInput" class="d-none" onchange="displayImages(this)" multiple>
-          
-          <div class="row align-items-center"> 
-            <div class="col-auto">
-              <input type="button" value="Recognize" onclick="submitForm('ocrForm', 'ocrResult')" class="btn btn-primary">
-            </div>
-            <div class="col-auto">
-              <div id="progressBarContainer" style="display: none; width: 100%;">
-                <div class="progress" style="width: 200px;">
-                  <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <input type="file" name="image" id="imageInput" class="d-none" accept=".png,.jpg,.jpeg,.bmp,.tif,.tiff" onchange="displayImages(this)" multiple>
+          <input type="button" value="Recognize" onclick="submitForm('ocrForm', 'ocrResult')" class="btn btn-primary">
         </form>
-        <div class="row mt-3" id="imagePreviewContainer"></div>
+        <div class="mt-3" id="imagePreviewContainer"></div>
+        <textarea id="ocrResult" rows="8" readonly class="form-control mt-3 d-none" aria-label="Recognized text"></textarea>
       </div>
 
-      <div class="row mt-3">
-        <div class="col-md-6">
-          <img id="imagePreviewContainer"></div>
-        <div class="col-md-6">
-          <textarea id="ocrResult" style="width: 100%;"></textarea>
-        </div>
+      <div class="border rounded p-4 content-section" id="translate">
+        <form id="translateForm">
+          <textarea name="text" rows="8" class="form-control mb-3" aria-label="Text to translate"></textarea>
+          <input type="button" value="Translate" onclick="translateStep()" class="btn btn-primary">
+          <small class="form-text text-muted">Translates on this computer with Chrome's built-in
+            <a href="https://developer.chrome.com/docs/ai/translator-api" target="_blank" rel="noopener">Translator API</a>
+            (desktop Chrome 138 or later). The first time, Chrome downloads its Chinese–English translation pack, about 80 MB.</small>
+        </form>
+        <textarea id="translateResult" rows="8" readonly class="form-control mt-3 d-none" aria-label="English translation"></textarea>
       </div>
 
       <div class="border rounded p-4 content-section" id="summary">
         <form id="summaryForm" action="/summarize" method="post">
-            <textarea name="text" rows="4" class="form-control mb-3"></textarea>
-            <input type="button" value="Summarize" onclick="submitForm('summaryForm', 'summaryResult')" class="btn btn-primary">
+          <textarea name="text" rows="8" class="form-control mb-3" aria-label="Text to summarize"></textarea>
+          <input type="button" value="Summarize" onclick="submitForm('summaryForm', 'summaryResult')" class="btn btn-primary">
         </form>
-        <textarea id="summaryResult" class="form-control mt-3"></textarea>
+        <textarea id="summaryResult" rows="8" readonly class="form-control mt-3 d-none" aria-label="Summary"></textarea>
       </div>
     </div>
-    
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+            integrity="sha384-vtXRMe3mGCbOeY7l30aIg8H9p3GdeSe4IFlP6G8JMa7o7lXvnz3GFKzPxzJdPfGK" crossorigin="anonymous"></script>
 
     <script>
+      function showResult(resultId, text) {
+        $('#' + resultId).val(text).removeClass('d-none');
+      }
+
       function submitForm(formId, resultId) {
-        let formData = new FormData(document.getElementById(formId));
-        let actionUrl = document.getElementById(formId).action;
-
-        function adjustTextareaHeight(textarea) {
-          textarea.style.height = "auto";
-          textarea.style.height = (textarea.scrollHeight + parseInt(window.getComputedStyle(textarea, null).getPropertyValue('line-height'))) + "px";
-        }
-
-        let interval;
-
-        if (formId === 'ocrForm') {
-          $('#progressBarContainer').show();
-          let width = 0;
-          interval = setInterval(function() {
-            width += 5;  
-            $('#progressBar').css('width', width + '%');
-
-            if (width >= 100) {
-              clearInterval(interval);
-            }
-          }, 1000);
-        }
+        const form = document.getElementById(formId);
+        const button = $(form).find('input[type=button]');
+        const label = button.val();
+        button.prop('disabled', true).val('Working...');
+        showResult(resultId, formId === 'ocrForm' ? 'Reading the photos...'
+                                                  : 'Summarizing on this computer with t5-small. A long record can take a minute...');
 
         $.ajax({
           type: 'POST',
-          url: actionUrl,
-          data: formData,
+          url: form.action,
+          data: new FormData(form),
           processData: false,
-          contentType: false,
-          success: function(data) {
-            if (formId === 'ocrForm') {
-              clearInterval(interval);
-              $('#progressBar').css('width', '100%');
-
-              setTimeout(function() { 
-                $('#progressBarContainer').hide();
-                $('#progressBar').css('width', '0%');
-
-                let resultText = data.recognized_text || 'No recognized text available';
-                $('#translateForm textarea[name="text"]').val(resultText);
-                const textareaElem = $('#' + resultId);
-                textareaElem.val(resultText).show();
-                adjustTextareaHeight(textareaElem[0]);
-              }, 1000);
-            } else if (formId === 'translateForm') {
-              let resultText = data.translated_text || 'No translation available';
-              $('#summaryForm textarea[name="text"]').val(resultText);
-              $('#translateResult').text(resultText).show();
-            } else if (formId === 'summaryForm') {
-              let resultText = data.summary || 'No summary available';
-              $('#summaryResult').text(resultText).show();
-            }
-          },
-          error: function() {
-            clearInterval(interval);
-            $('#progressBar').css('width', '100%');
-
-            setTimeout(function() {
-              $('#progressBarContainer').hide();
-              $('#progressBar').css('width', '0%');
-              $('#' + resultId).val('ERROR!!!').show();
-            }, 1000);
+          contentType: false
+        }).done(function(data) {
+          if (formId === 'ocrForm') {
+            showResult(resultId, data.recognized_text || 'No text found');
+            $('#translateForm textarea[name="text"]').val(data.recognized_text || '');
+          } else {
+            showResult(resultId, data.summary || 'No summary available');
           }
+        }).fail(function(xhr) {
+          showResult(resultId, (xhr.responseJSON && xhr.responseJSON.error) || 'Something went wrong. Please try again.');
+        }).always(function() {
+          button.prop('disabled', false).val(label);
         });
       }
 
+      // Step 2 translates in the browser with Chrome's built-in Translator API, on this computer.
+      let translator = null;
+      let wait = null;   // while Translate waits for Chrome: {start, last, download, percent}
+
+      // createTranslator() is adapted, with changes, from the code samples in Chrome's Translator API documentation
+      // (Copyright Google LLC, Apache License 2.0; see THIRD_PARTY_NOTICES.md).
+      function createTranslator() {
+        return Translator.create({sourceLanguage: 'zh', targetLanguage: 'en', monitor(m) {
+          m.addEventListener('downloadprogress', e => {   // Chrome also reports 0 and 1 when nothing is downloaded
+            if (!wait || !(e.loaded > 0 && (e.loaded < 1 || wait.download))) return;
+            Object.assign(wait, {download: true, percent: Math.floor(e.loaded * 100), last: Date.now()});
+            showWait();
+          });
+        }});
+      }
+
+      async function translateText(text) {
+        translator ??= createTranslator();   // before any await: a first download needs the click
+        const run = async () => {
+          const model = await translator;
+          // Chrome turns line breaks into spaces, so translate line by line
+          return (await Promise.all(text.split('\n').map(line => line.trim() ? model.translate(line) : line))).join('\n');
+        };
+        try {
+          return await run();
+        } catch {   // Chrome's first translator after a start can fail, and adding or removing any language pack breaks
+                    // existing ones; one new try needs no click while the language pack is installed
+          translator = createTranslator();
+          return await run();
+        }
+      }
+
+      function showWait() {   // what Chrome is doing while a first-time translation pack download may be running
+        if (!wait || !wait.download) return;
+        if (wait.percent === 100) return showResult('translateResult', 'Translating...');
+        showResult('translateResult', 'Chrome is downloading its Chinese–English translation pack (first time only, about 80 MB): ' +
+          (wait.percent === null ? `${Math.round((Date.now() - wait.start) / 1000)} s so far` : `${wait.percent}%`));
+      }
+
+      async function translateStep() {
+        const text = $('#translateForm textarea[name="text"]').val();
+        if (!('Translator' in self)) {
+          return showResult('translateResult', "This browser doesn't support the Translator API that this page uses. " +
+                            'Open the page in desktop Chrome 138 or later, or type the English text into Step 3.');
+        }
+        if (!text.trim()) {
+          return showResult('translateResult', 'There is no text to translate.');
+        }
+        const button = $('#translateForm input[type=button]').prop('disabled', true).val('Working...');
+        wait = {start: Date.now(), last: Date.now(), download: false, percent: null};
+        const request = translateText(text);   // starts Chrome's translator while the click still counts
+        showResult('translateResult', 'Translating...');
+        Translator.availability({sourceLanguage: 'zh', targetLanguage: 'en'}).then(state => {
+          if (wait && state !== 'available') { wait.download = true; showWait(); }   // the pack may have to be downloaded
+        }, () => {});
+        const ticker = setInterval(function() {
+          if (!wait) return;
+          if (Date.now() - wait.last < 60000) return showWait();
+          showResult('translateResult', 'Still waiting for Chrome. Check the internet connection, or reload the page.');
+        }, 1000);
+        try {
+          const english = await request;
+          showResult('translateResult', english);
+          $('#summaryForm textarea[name="text"]').val(english);
+        } catch (error) {
+          console.error(error);
+          translator = null;   // the next click starts again
+          const state = await Translator.availability({sourceLanguage: 'zh', targetLanguage: 'en'}).catch(() => 'unavailable');
+          showResult('translateResult', state === 'unavailable' ? "Chrome can't translate Chinese into English on this computer. Type the English text into Step 3 instead."
+                                                                   : 'Chrome needs one more click to finish setting up its translator. Click Translate again.');
+        } finally {
+          clearInterval(ticker);
+          wait = null;
+          button.prop('disabled', false).val('Translate');
+        }
+      }
+
       function displayImages(input) {
-          const imageContainer = $('#imagePreviewContainer');
-          imageContainer.empty();
-
-          if (input.files && input.files.length > 0) {
-              for (let i = 0; i < input.files.length; i++) {
-                  const reader = new FileReader();
-
-                  reader.onload = function(e) {
-                      const img = $('<img>').attr('src', e.target.result).addClass('col-md-3 mb-3').css('max-width', '100%');
-                      imageContainer.append(img);
-                  }
-
-                  reader.readAsDataURL(input.files[i]);
-              }
-          }
+        const imageContainer = $('#imagePreviewContainer').empty();
+        for (const file of input.files) {
+          imageContainer.append($('<img>').attr({src: URL.createObjectURL(file), alt: file.name}).addClass('border mr-2 mb-2'));
+        }
       }
 
       function switchTab(tabName) {
@@ -195,25 +213,19 @@
       $(document).ready(function() {
         $('.file-dropzone').on('dragover', function(e) {
           e.preventDefault();
-          e.stopPropagation();
           $(this).addClass('dragover');
-        }).on('dragleave', function(e) {
-          e.preventDefault();
-          e.stopPropagation();
+        }).on('dragleave', function() {
           $(this).removeClass('dragover');
         }).on('drop', function(e) {
           e.preventDefault();
-          e.stopPropagation();
           $(this).removeClass('dragover');
-          let files = e.originalEvent.dataTransfer.files;
-          $('#imageInput').prop('files', files);
-          displayImage(document.getElementById('imageInput'));
+          const input = document.getElementById('imageInput');
+          input.files = e.originalEvent.dataTransfer.files;
+          displayImages(input);
         });
 
         switchTab('ocr');
       });
-
     </script>
-
   </body>
 </html>

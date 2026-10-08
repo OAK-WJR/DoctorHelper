@@ -1,0 +1,8 @@
+Flask==2.3.3
+nltk==3.8.1
+numpy==1.26.4
+paddleocr==2.7.0.2
+paddlepaddle==2.6.2
+sentencepiece==0.2.0
+torch==1.12.1
+transformers==4.28.1
