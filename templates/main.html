@@ -30,6 +30,10 @@
         max-height: 120px;
         max-width: 100%;
       }
+
+      .btn[aria-disabled="true"] {
+        cursor: default;
+      }
     </style>
     <title>Doctor-Helper Demo</title>
   </head>
@@ -91,11 +95,16 @@
         $('#' + resultId).val(text).removeClass('d-none');
       }
 
+      function busy(button, on) {   // a busy button is not disabled, which would take the keyboard focus away
+        return button.toggleClass('disabled', on).attr('aria-disabled', on);
+      }
+
       function submitForm(formId, resultId) {
         const form = document.getElementById(formId);
         const button = $(form).find('input[type=button]');
+        if (button.attr('aria-disabled') === 'true') return;
         const label = button.val();
-        button.prop('disabled', true).val('Working...');
+        busy(button, true).val('Working...');
         showResult(resultId, formId === 'ocrForm' ? 'Reading the photos...'
                                                   : 'Summarizing on this computer with t5-small. A long record can take a minute...');
 
@@ -115,11 +124,13 @@
         }).fail(function(xhr) {
           showResult(resultId, (xhr.responseJSON && xhr.responseJSON.error) || 'Something went wrong. Please try again.');
         }).always(function() {
-          button.prop('disabled', false).val(label);
+          busy(button, false).val(label);
         });
       }
 
       // Step 2 translates in the browser with Chrome's built-in Translator API, on this computer.
+      // Desktop Chrome 138 or later; Edge 148+ has this API with Microsoft's models, and Opera is untested.
+      const chromeTranslator = 'Translator' in self && !(navigator.userAgentData && navigator.userAgentData.brands.some(b => /Edge|Opera/.test(b.brand)));
       let translator = null;
       let wait = null;   // while Translate waits for Chrome: {start, last, download, percent}
 
@@ -136,7 +147,7 @@
       }
 
       async function translateText(text) {
-        translator ??= createTranslator();   // before any await: a first download needs the click
+        if (!translator) translator = createTranslator();   // before any await: a first download needs the click
         const run = async () => {
           const model = await translator;
           // Chrome turns line breaks into spaces, so translate line by line
@@ -144,7 +155,7 @@
         };
         try {
           return await run();
-        } catch {   // Chrome's first translator after a start can fail, and adding or removing any language pack breaks
+        } catch (error) {   // Chrome's first translator after a start can fail, and adding or removing any language pack breaks
                     // existing ones; one new try needs no click while the language pack is installed
           translator = createTranslator();
           return await run();
@@ -153,21 +164,25 @@
 
       function showWait() {   // what Chrome is doing while a first-time translation pack download may be running
         if (!wait || !wait.download) return;
+        // Chrome also says 'downloadable' for an installed pack this site has not used yet; that one is ready in about a second
+        if (wait.percent === null && Date.now() - wait.start < 1500) return;
         if (wait.percent === 100) return showResult('translateResult', 'Translating...');
         showResult('translateResult', 'Chrome is downloading its Chinese–English translation pack (first time only, about 80 MB): ' +
           (wait.percent === null ? `${Math.round((Date.now() - wait.start) / 1000)} s so far` : `${wait.percent}%`));
       }
 
       async function translateStep() {
+        const button = $('#translateForm input[type=button]');
+        if (button.attr('aria-disabled') === 'true') return;
         const text = $('#translateForm textarea[name="text"]').val();
-        if (!('Translator' in self)) {
-          return showResult('translateResult', "This browser doesn't support the Translator API that this page uses. " +
-                            'Open the page in desktop Chrome 138 or later, or type the English text into Step 3.');
+        if (!chromeTranslator) {
+          return showResult('translateResult', 'Translating needs desktop Chrome 138 or later. Open the page there, ' +
+                            'or type the English text into Step 3.');
         }
         if (!text.trim()) {
           return showResult('translateResult', 'There is no text to translate.');
         }
-        const button = $('#translateForm input[type=button]').prop('disabled', true).val('Working...');
+        busy(button, true).val('Working...');
         wait = {start: Date.now(), last: Date.now(), download: false, percent: null};
         const request = translateText(text);   // starts Chrome's translator while the click still counts
         showResult('translateResult', 'Translating...');
@@ -192,7 +207,7 @@
         } finally {
           clearInterval(ticker);
           wait = null;
-          button.prop('disabled', false).val('Translate');
+          busy(button, false).val('Translate');
         }
       }
 

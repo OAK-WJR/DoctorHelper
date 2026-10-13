@@ -6,11 +6,13 @@ A small web demo that reads photos of a Chinese medical record, translates the t
 
 I built it in September–October 2023.
 
+**[See it work](https://oak-wjr.github.io/DoctorHelper/)** on a made-up medical record: the two images, the text PaddleOCR read, Chrome's translation and t5-small's summary from one run ([video](https://oak-wjr.github.io/DoctorHelper/demo.mp4)).
+
 ## How it works
 
 1. **OCR**: PaddleOCR reads the Chinese text on one or more photos, on your own computer.
 2. **Translate**: Chrome's built-in [Translator API](https://developer.chrome.com/docs/ai/translator-api) translates the text into English line by line, in the browser on your own computer.
-3. **Summary**: the general-purpose t5-small model shortens the English text a few sentences at a time, on your own computer. It repeats this until the text is about a third of its original length, for at most five rounds, and stops early when a round makes the text no shorter.
+3. **Summary**: the general-purpose t5-small model shortens the English text on your own computer. The text is cut into whole sentences and grouped into pieces of about 480 characters; t5-small rewrites each piece shorter, and the pieces are joined again. This repeats until the text is about a third of its original length, for at most five rounds, and stops early when a round makes the text no shorter. Finally, sentences made of the same words are dropped.
 
 Each step's result is copied into the next step, where it can be corrected before going on.
 
@@ -31,7 +33,7 @@ Then open http://127.0.0.1:8000 in Chrome. The first start downloads the PaddleO
 
 - Use made-up records only.
 - t5-small is a small general-purpose model, not one made for medical text, so a summary can leave out or change important facts. Machine translations can be wrong too.
-- Browsers without the Translator API, such as Safari and Firefox, can't run the Translate step; type the English text into Step 3 instead.
+- The Translate step needs desktop Chrome 138 or later; in other browsers, such as Safari, Firefox and Edge, type the English text into Step 3 instead.
 - Each time the page opens, it loads Bootstrap and jQuery from public CDNs; photos and text are never sent to them.
 - The summary runs on your computer's processor, so a long record can take about a minute.
 - Uploaded photos are only kept in a temporary file while they are read.

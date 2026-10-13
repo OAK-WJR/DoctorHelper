@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DoctorHelper demo</title>
+  <meta name="description" content="A demo of DoctorHelper: a made-up Chinese medical record read with PaddleOCR, translated into English with Chrome's built-in Translator API and summarized with t5-small.">
+  <style>
+    :root { --ink: #1f2328; --muted: #59636e; --line: #d1d9e0; --paper: #fff; --bg: #f6f8fa; --link: #0b57d0; --warn: #fff8c5; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink);
+           font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", sans-serif; }
+    main { max-width: 860px; margin: 0 auto; padding: 24px 16px 40px; }
+    a { color: var(--link); }
+    h1 { font-size: 1.6rem; margin: 0 0 10px; }
+    h2 { font-size: 1.15rem; margin: 0 0 10px; }
+    .notice { background: var(--warn); border: 1px solid #d4a72c; border-radius: 6px; padding: 8px 12px; margin: 0 0 14px; }
+    .lead { color: var(--muted); margin: 0 0 18px; }
+    section { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; margin-bottom: 16px; }
+    .images { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+    .images img { max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 4px; }
+    @media (min-width: 700px) { .images img { max-width: calc(50% - 5px); } }
+    .label { color: var(--muted); font-size: .9rem; margin: 10px 0 4px; }
+    .text { margin: 0; white-space: pre-wrap; }
+    .how { color: var(--muted); font-size: .9rem; margin: 12px 0 0; }
+    footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>DoctorHelper</h1>
+  <p class="notice" role="note">Research project only. It has not reached the stage of clinical use. Do not use it to make medical decisions.</p>
+  <p class="lead">A demo of <a href="https://github.com/OAK-WJR/DoctorHelper">DoctorHelper</a>: it read two images of a made-up Chinese medical record
+    with PaddleOCR, translated the text into English with Chrome's built-in <a href="https://developer.chrome.com/docs/ai/translator-api">Translator API</a>
+    and summarized it with t5-small, all on one computer. These are the saved results of that run (<a href="demo.mp4">video</a>).
+    To read your own photos, run DoctorHelper on your computer (<a href="https://github.com/OAK-WJR/DoctorHelper#running-it">how</a>).</p>
+
+  <section>
+    <h2>Step 1: OCR</h2>
+    <div class="images">
+      <img src="photos/record-page1.png" width="1000" height="390" alt="Image 1 of the made-up record">
+      <img src="photos/record-page2.png" width="1000" height="330" alt="Image 2 of the made-up record">
+    </div>
+    <p class="label">Text read by PaddleOCR:</p>
+    <p class="text" id="recognized" lang="zh-CN" translate="no">入院记录（示例，内容为虚构）
+姓名：（已隐去）性别：男年龄：32岁
+主诉：发热丶咳嗽三天，伴右侧胸痛。
+现病史：3天前受凉后畏寒丶发热，体温最高39.5℃，
+咳少量铁锈色痰。
+
+既往史：无药物过敏史，无手术史。
+查体：体温38.6℃，右下肺可闻及湿啰音。
+胸片：右下肺斑片状阴影。
+初步诊断：右下肺炎</p>
+  </section>
+
+  <section>
+    <h2>Step 2: Translate</h2>
+    <p class="label">Machine translation by Chrome's built-in Translator API:</p>
+    <p class="text" id="translated" lang="en" translate="no">Admission records (example, content is fictitious)
+Name: (Hidden) Gender: Male Age: 32 years old
+Chief complaint: fever, cough for three days, accompanied by chest pain on the right side.
+History of present disease: 3 days ago, after a cold, chills and fever, the highest body temperature was 39.5 ℃,
+Cough a small amount of rust-colored phlegm.
+
+Past history: no history of drug allergies, no history of surgery.
+Physical examination: body temperature is 38.6 ℃, and the lower lower lung can smell and wet rales.
+Chest X-ray: patch-like shadow in the lower right lower lung.
+Preliminary diagnosis: right lower pneumonia</p>
+  </section>
+
+  <section>
+    <h2>Step 3: Summary</h2>
+    <p class="label">Summary by t5-small, made from the translation above:</p>
+    <p class="text" id="summary" lang="en" translate="no">3 days ago, after a cold, chills and fever, the highest body temperature was 39.5 °C, Cough a small amount of rust-colored phlegm. body temperature is 38.6 °C, and lower right lower lung can smell and wet rales.</p>
+    <p class="how">How it is made: the English text is cut into whole sentences, grouped into pieces of about 480 characters,
+      and t5-small, a small general-purpose model, rewrites each piece shorter. The pieces are joined and this repeats,
+      for at most five rounds, until the text is about a third of its first length; it stops early when a round makes the
+      text no shorter. Finally, sentences made of the same words are dropped.</p>
+  </section>
+
+  <footer>
+    <p>The record was made up for this demo, and the name on it is hidden. Machine translations and summaries can leave out or change facts.
+      Third-party parts and their terms are listed in <a href="https://github.com/OAK-WJR/DoctorHelper/blob/main/THIRD_PARTY_NOTICES.md">THIRD_PARTY_NOTICES.md</a>.</p>
+  </footer>
+</main>
+</body>
+</html>
